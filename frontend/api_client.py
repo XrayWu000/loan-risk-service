@@ -1,6 +1,6 @@
 import requests
 
-API_URL = "http://127.0.0.1:8000/predict"
+from config import API_URL
 
 def predict_from_api(age, gender, income, emp, home, amnt, intent, rate, percent, cred_len, score):
     payload = {

@@ -8,7 +8,7 @@ from datetime import datetime
 csv_lock = threading.Lock()
 pending_retry_data = None
 
-CSV_FILE = "loan_requests_full.csv"
+from config import CSV_FILE
 
 
 def save_to_csv(age, gender, edu, income, emp, home, amnt, intent,

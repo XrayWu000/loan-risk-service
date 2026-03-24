@@ -1,10 +1,11 @@
 import gradio as gr
 
 # ===== 自己模組 =====
-from api_client import predict_from_api
-from utils import validate_precision
-from services.logger import save_to_csv, retry_write
-from services.log_service import view_latest_logs, get_log_file
+from frontend.api_client import predict_from_api
+from frontend.utils import validate_precision
+from frontend.services.logger import save_to_csv, retry_write
+from frontend.services.log_service import view_latest_logs, get_log_file
+from config import CSS_FILE
 
 # =========================
 # ⭐ 核心流程（API + logger）
@@ -67,7 +68,7 @@ def retry_write_csv():
 
 
 # ===== CSS 載入 =====
-with open("frontend/static/styles.css", "r", encoding="utf-8") as f:
+with open(CSS_FILE, "r", encoding="utf-8") as f:
     custom_css = f.read()
 
 

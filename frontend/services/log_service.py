@@ -1,8 +1,7 @@
 import pandas as pd
 import os
 
-CSV_FILE = "loan_requests_full.csv"
-
+from config import CSV_FILE
 
 def view_latest_logs():
     try:

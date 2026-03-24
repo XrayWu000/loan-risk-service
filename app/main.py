@@ -11,14 +11,12 @@ app = FastAPI()
 # =========================
 # 載入模型
 # =========================
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_PATH = os.path.join(BASE_DIR, "models", "lgbm_best_model.zip")
+from config import MODEL_PATH, FEATURE_FILE
 model = joblib.load(MODEL_PATH)
 
 # =========================
 # 載入 feature 順序（如果有）
 # =========================
-FEATURE_FILE = os.path.join(BASE_DIR, "lgbm_best_model_features.json")
 
 try:
     with open(FEATURE_FILE, "r", encoding="utf-8") as f:
