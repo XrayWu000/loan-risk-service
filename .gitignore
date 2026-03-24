@@ -26,3 +26,6 @@ test.ipynb
 **/catboost_info/
 
 .gradio
+
+__pycache__/
+*.pyc

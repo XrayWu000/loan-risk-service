@@ -1,0 +1,187 @@
+/* ==========================================
+   1. 全域背景與字體
+========================================== */
+.gradio-container {
+    background-color: #f0f8ff;
+    font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+}
+
+/* ==========================================
+   2. 主標題區
+========================================== */
+.main-header {
+    text-align: center;
+    color: #0056b3;
+    padding: 20px;
+}
+
+.main-header h1 {
+    font-size: 70px !important;
+    /* 主標題大小調整 */
+    font-weight: 800;
+    margin-bottom: 10px;
+    /* 主副標間距 */
+}
+
+.main-header p {
+    font-size: 35px;
+    /* 副標字體大小 */
+    color: #555;
+}
+
+/* ==========================================
+   3. 題目（Label）樣式
+========================================== */
+span[data-testid="block-info"] {
+    font-size: 25px !important;
+    /* 題目字體大小 */
+    font-weight: bold !important;
+    color: #333 !important;
+}
+
+/* ==========================================
+   4. 輸入框樣式
+========================================== */
+input,
+select,
+textarea {
+    font-size: 20px !important;
+    /* 輸入文字大小 */
+    text-align: center !important;
+    /* left / center / right */
+    color: #0056b3 !important;
+    font-weight: 500;
+}
+
+/* ==========================================
+   5. 插畫區
+========================================== */
+.illustration-row {
+    display: flex;
+    justify-content: space-around;
+    padding: 20px;
+    background: white;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================
+   6. 送出按鈕
+========================================== */
+.submit-btn {
+    background-color: #007bff !important;
+    color: white !important;
+    border-radius: 30px !important;
+    font-size: 24px !important;
+    font-weight: bold !important;
+}
+
+.submit-btn:hover {
+    transform: scale(1.05);
+    transition: 0.3s;
+    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+}
+
+/* ==========================================
+   7. 金額單位（元）
+========================================== */
+#unit-yuan-1,
+#unit-yuan-2 {
+    position: relative;
+}
+
+#unit-yuan-1::after,
+#unit-yuan-2::after {
+    content: "元";
+    position: absolute;
+    right: 25px;
+    bottom: 23px;
+    font-size: 20px;
+    color: #0056b3;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+/* 輸入框右側留空間避免重疊 */
+#unit-yuan-1 input,
+#unit-yuan-2 input {
+    padding-right: 0px !important;
+    /* 數值越大 → 往左 */
+}
+
+/* ==========================================
+   8. Modal 彈窗
+========================================== */
+#modal_container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+#modal_container[style*="display: block"] {
+    display: flex !important;
+}
+
+#modal_container>* {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    width: 400px;
+    text-align: center;
+}
+
+/* ==========================================
+   🏦 銀行藍 3D Retry 按鈕
+========================================== */
+.bank-retry-btn {
+    position: relative;
+    background: linear-gradient(145deg, #0d6efd, #003f9e) !important;
+    color: white !important;
+    border-radius: 50px !important;
+    font-size: 20px !important;
+    font-weight: bold !important;
+    padding: 14px 32px !important;
+    border: none !important;
+
+    box-shadow:
+        0 6px 0 #002e75,
+        0 12px 20px rgba(0, 63, 158, 0.4);
+
+    transition: all 0.15s ease-in-out;
+}
+
+/* 高光 */
+.bank-retry-btn::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 8%;
+    width: 84%;
+    height: 40%;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 50px;
+    pointer-events: none;
+}
+
+/* Hover */
+.bank-retry-btn:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 8px 0 #002e75,
+        0 18px 25px rgba(0, 63, 158, 0.5);
+}
+
+/* Active */
+.bank-retry-btn:active {
+    transform: translateY(4px);
+    box-shadow:
+        0 2px 0 #002e75,
+        0 6px 12px rgba(0, 63, 158, 0.4);
+}
