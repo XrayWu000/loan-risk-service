@@ -115,7 +115,7 @@
 ---
 
 ## 📂 Project Structure
----
+```
 loan-approval-ml/
 │
 ├─ henry/ # 模型開發、特徵工程、Gradio應用
@@ -126,7 +126,7 @@ loan-approval-ml/
 │
 ├─ README.md
 └─ .gitignore
-
+```
 ---
 
 ## 🚀 Key Highlights（專案亮點）
