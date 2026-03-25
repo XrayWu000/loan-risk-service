@@ -160,4 +160,4 @@ with gr.Blocks() as demo:
 # 啟動（Gradio 6 正確寫法）
 # =========================
 if __name__ == "__main__":
-    demo.launch(css=custom_css)
+    demo.launch(css=custom_css, server_name="0.0.0.0", server_port=7860)
