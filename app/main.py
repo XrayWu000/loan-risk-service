@@ -1,17 +1,20 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 import pandas as pd
-import numpy as np
 import joblib
-import json
 import os
+from datetime import datetime
 
-from config import MODEL_PATH, FEATURE_FILE
+# 🔥 pipeline（統一用這個）
+from pipeline.feature_engineering import prepare_model_input
+
+# 🔧 config
+from config import MODEL_PATH, FEATURE_FILE, CSV_FILE
 
 app = FastAPI()
 
 # =========================
-# 載入模型（加錯誤處理）
+# 載入模型
 # =========================
 try:
     model = joblib.load(MODEL_PATH)
@@ -19,16 +22,7 @@ except Exception as e:
     raise RuntimeError(f"模型載入失敗: {str(e)}")
 
 # =========================
-# 載入 feature 順序
-# =========================
-try:
-    with open(FEATURE_FILE, "r", encoding="utf-8") as f:
-        FEATURE_COLUMNS = json.load(f)
-except:
-    FEATURE_COLUMNS = None
-
-# =========================
-# API Input Schema（加限制）
+# API Input Schema
 # =========================
 class LoanInput(BaseModel):
     person_age: float = Field(..., ge=20, le=80)
@@ -44,52 +38,21 @@ class LoanInput(BaseModel):
     credit_score: int = Field(..., ge=200, le=850)
 
 # =========================
-# Feature Engineering
+# CSV Logging
 # =========================
-def preprocess(df):
-    gender_map = {"男": 1, "女": 0}
-    home_map = {"租賃": 0, "自有（尚有貸款）": 1, "自有（無貸款）": 2}
-    intent_map = {"個人周轉": 0, "醫療照護": 1, "創業周轉": 2, "教育進修": 3}
+def save_to_csv(input_data: dict, probability: float):
+    row = input_data.copy()
+    row["probability"] = probability
+    row["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # ❗ mapping 檢查（避免 None）
-    if df["person_gender"].iloc[0] not in gender_map:
-        raise ValueError("無效的性別")
+    df = pd.DataFrame([row])
 
-    if df["person_home_ownership"].iloc[0] not in home_map:
-        raise ValueError("無效的居住狀況")
+    os.makedirs(os.path.dirname(CSV_FILE), exist_ok=True)
 
-    if df["loan_intent"].iloc[0] not in intent_map:
-        raise ValueError("無效的貸款用途")
-
-    df["person_gender"] = df["person_gender"].map(gender_map)
-    df["person_home_ownership"] = df["person_home_ownership"].map(home_map)
-    df["loan_intent"] = df["loan_intent"].map(intent_map)
-
-    df["log_income"] = np.log1p(df["person_income"])
-    df["interest_pressure"] = df["loan_int_rate"] * df["loan_percent_income"]
-
-    columns = [
-        "person_home_ownership",
-        "loan_intent",
-        "loan_int_rate",
-        "cb_person_cred_hist_length",
-        "interest_pressure",
-        "person_emp_exp",
-        "person_age",
-        "person_gender",
-        "loan_amnt",
-        "log_income"
-    ]
-
-    if FEATURE_COLUMNS:
-        columns = FEATURE_COLUMNS
-
-    df = df[columns]
-
-    for col in ["person_home_ownership", "loan_intent", "person_gender"]:
-        df[col] = df[col].astype("category")
-
-    return df
+    if not os.path.exists(CSV_FILE):
+        df.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
+    else:
+        df.to_csv(CSV_FILE, mode="a", header=False, index=False, encoding="utf-8-sig")
 
 # =========================
 # Routes
@@ -101,10 +64,43 @@ def root():
 @app.post("/predict")
 def predict(data: LoanInput):
     try:
-        df = pd.DataFrame([data.dict()])
-        df = preprocess(df)
+        input_dict = data.dict()
 
+        # =========================
+        # 1️⃣ 輸入驗證（保留你原本邏輯）
+        # =========================
+        valid_gender = {"男", "女"}
+        valid_home = {"租賃", "自有（尚有貸款）", "自有（無貸款）"}
+        valid_intent = {"個人周轉", "醫療照護", "創業周轉", "教育進修"}
+
+        if input_dict["person_gender"] not in valid_gender:
+            raise ValueError("無效的性別")
+
+        if input_dict["person_home_ownership"] not in valid_home:
+            raise ValueError("無效的居住狀況")
+
+        if input_dict["loan_intent"] not in valid_intent:
+            raise ValueError("無效的貸款用途")
+
+        # =========================
+        # 2️⃣ DataFrame
+        # =========================
+        df = pd.DataFrame([input_dict])
+
+        # =========================
+        # 3️⃣ Pipeline（🔥統一）
+        # =========================
+        df = prepare_model_input(df)
+
+        # =========================
+        # 4️⃣ 預測
+        # =========================
         prob = model.predict_proba(df)[0][1]
+
+        # =========================
+        # 5️⃣ Logging（成功才存）
+        # =========================
+        save_to_csv(input_dict, float(prob))
 
         return {
             "status": "success",

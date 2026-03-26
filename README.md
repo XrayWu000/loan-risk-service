@@ -1,28 +1,40 @@
 # 🏦 Loan Risk Assessment System
 
-A complete end-to-end machine learning system for loan default prediction, including model training, API deployment, and interactive user interface.
+A production-oriented end-to-end machine learning system for loan default prediction, including model training, API deployment, and interactive user interface.
+
+---
+
+## 🚀 Live Demo
+
+- 🌐 Web App: http://localhost:7860
+- 📘 API Docs: http://localhost:8000/docs
 
 ---
 
 ## 📌 Project Overview
 
-This project builds a **Loan Risk Assessment System** using machine learning to predict the probability of loan default based on applicant information.
+This project builds a **Loan Risk Assessment System** to predict the probability of loan default based on applicant information.
 
-The system integrates:
-
-- Machine Learning Model (LightGBM)
-- FastAPI (Model Serving)
-- Gradio (User Interface)
-- CSV Logging System
-- Docker (Deployment)
+The system is designed as a complete AI application, not just a machine learning model.
 
 ---
 
-## 🎯 Objectives
+## 💼 Use Case
 
-- Predict loan default risk using structured financial data
-- Build an end-to-end AI application (not just a model)
-- Provide interpretable and deployable solution
+This system simulates a real-world bank loan approval workflow:
+
+1. User submits loan application
+2. System evaluates risk using ML model
+3. Outputs decision:
+   - Approve
+   - Manual Review
+   - Reject
+
+Business value:
+
+- Reduce default risk
+- Improve decision efficiency
+- Provide interpretable AI decisions
 
 ---
 
@@ -31,110 +43,150 @@ The system integrates:
 - Model: LightGBM
 - Task: Binary Classification (Default / Non-default)
 - Dataset: ~45,000 loan records
-- Features include:
-  - Demographics (age, gender)
-  - Financial info (income, employment)
-  - Loan details (amount, interest rate)
 
 ### Feature Engineering
 
-- Log transformation: `log_income`
-- Interaction feature: `interest_pressure`
-- Categorical encoding (manual mapping)
+- log transformation: `log_income`
+- interaction feature: `interest_pressure`
+- categorical encoding (manual mapping)
+
+### Training Strategy
+
+- Metric: Average Precision (PR-AUC)
+- Class Weighting: Improve recall for high-risk cases
+- Early Stopping: Prevent overfitting
+- Regularization: L1 / L2 applied
+
+---
+
+## ⚖️ Decision Strategy
+
+Based on predicted probability:
+
+- ≥ 0.50 → 🚨 Reject (High Risk)
+- ≥ 0.20 → ⚠️ Manual Review (Medium Risk)
+- < 0.20 → ✅ Approve (Low Risk)
 
 ---
 
 ## 🏗️ System Architecture
+
+```mermaid
+flowchart TB
+
+A[User Input]
+→ B[Gradio UI]
+→ C[FastAPI API]
+→ D[Feature Engineering Pipeline]
+→ E[LightGBM Model]
+→ F[Prediction Result]
+
+F → G[Decision Logic]
+G → H[UI Display]
+
+F → I[CSV Logging]
+I → J[Dashboard]
 ```
-User Input (Gradio UI)
-↓
-Frontend (Gradio)
-↓ API Request
-FastAPI Backend
-↓
-Model Inference (LightGBM)
-↓
-Prediction Result
-↓
-CSV Logging + Dashboard
-```
+
 ---
 
-## 📁 Project Structure
+## 🔄 Machine Learning Pipeline
+
+```mermaid
+flowchart TB
+
+A[Raw Data CSV]
+→ B[Data Loading]
+→ C[Feature Engineering]
+→ D[Train / Validation Split]
+→ E[Model Training]
+→ F[Evaluation]
+→ G[Save Model & Features]
+
+G → H[Inference Pipeline]
 ```
-loan-risk-service/
-├── app/ # FastAPI backend
-├── frontend/ # Gradio UI
-│ ├── services/ # logging & dashboard
-│ └── static/ # CSS
-├── models/ # trained model
-├── data/ # CSV logs
-├── config.py # central config
-├── docker-compose.yml
-├── Dockerfile.api
-├── Dockerfile.frontend
-└── requirements.txt
-```
+
+---
+
 ## ⚙️ API Features
 
 - Input validation (Pydantic)
 - Error handling (HTTPException)
-- Feature preprocessing pipeline
+- Unified feature engineering pipeline
 - Stable response format
 
 ### Example Response
 
 ```
-json
 {
   "status": "success",
   "probability": 0.23
 }
 ```
-## 💻 Frontend Features (Gradio)
+
+---
+
+## 💻 Frontend (Gradio)
 
 - User-friendly loan application UI
 - Real-time prediction
 - Input validation
-- CSV logging system
-- Dashboard (view latest records)
-- Download report functionality
+- Risk decision output
 
 ---
 
 ## 🗂️ Logging System
 
-- Saves all requests to CSV
+- Stores all prediction requests in CSV
 - Includes:
   - Input data
-  - Prediction result
+  - Prediction probability
   - Timestamp
-- Thread-safe writing (lock mechanism)
-- Retry mechanism for write failures
+
+- Enables:
+  - Monitoring
+  - Future retraining
+  - Data analysis
 
 ---
 
-## 🐳 Deployment (Docker)
-
-### Run the system
+## 📁 Project Structure
 
 ```
-bash
+loan-risk-service/
+├── app/                  # FastAPI backend
+├── frontend/             # Gradio UI
+├── pipeline/             # ML pipeline
+├── models/               # trained model + features
+├── data/                 # logs / dataset
+├── config.py             # central config
+├── main_train.py         # training entry
+├── docker-compose.yml
+```
+
+---
+
+## 🐳 Deployment
+
+Run the system locally:
+
+```
 docker compose up --build
 ```
-### Access services
 
-- API: http://localhost:8000/docs
-- UI: http://localhost:7860
+Access:
+
+- API → http://localhost:8000/docs
+- UI → http://localhost:7860
 
 ---
 
 ## 🔧 Tech Stack
 
 - Python
+- LightGBM
 - FastAPI
 - Gradio
-- LightGBM
 - Pandas / NumPy
 - Docker
 
@@ -142,29 +194,22 @@ docker compose up --build
 
 ## 🚀 Key Highlights
 
-- End-to-end ML system (not just model)
-- Modular architecture (frontend / backend / service layer)
-- Production-oriented design (API + validation + logging)
-- Dockerized deployment
+- End-to-end ML system (training → deployment → UI)
+- Consistent feature pipeline (train = inference)
+- Production-oriented design (API + logging)
+- Decision-focused ML (threshold tuning for recall)
 
 ---
 
 ## 📈 Future Improvements
 
-- Add authentication system
 - Replace CSV with database (PostgreSQL)
-- Deploy to cloud (GCP / AWS / Render)
-- Add model monitoring
+- Model monitoring (data drift / performance)
+- Cloud deployment (GCP / AWS / Render)
+- Authentication system
 
 ---
 
 ## 👨‍💻 Author
 
 Henry Wu
-
----
-
-## 🔗 Demo
-
-- API Docs: http://localhost:8000/docs
-- UI: http://localhost:7860
