@@ -3,9 +3,15 @@ import gradio as gr
 # ===== 自己模組 =====
 from frontend.api_client import predict_from_api
 from frontend.utils import validate_precision
-from frontend.services.logger import save_to_csv, retry_write
+from frontend.services.logger import retry_write
 from frontend.services.log_service import view_latest_logs, get_log_file
-from config import CSS_FILE
+from config import (
+    CSS_FILE,
+    GENDER_OPTIONS,
+    EDUCATION_OPTIONS,
+    HOME_OWNERSHIP_OPTIONS,
+    LOAN_INTENT_OPTIONS,
+)
 
 # =========================
 # ⭐ 核心流程（API + logger）
@@ -20,11 +26,13 @@ def process_loan_request(age, gender, edu, income, emp, home, amnt, intent, rate
 
     # ===== API =====
     try:
-        probability = predict_from_api(
-            age, gender, income, emp, home,
+        response_data = predict_from_api(
+            age, gender, edu, income, emp, home,
             amnt, intent, rate_val, percent_val,
             cred_len, score
         )
+        probability = response_data["probability"]
+        case_id = response_data["case_id"]
     except Exception as e:
         return f"❌ API錯誤: {str(e)}"
 
@@ -36,24 +44,11 @@ def process_loan_request(age, gender, edu, income, emp, home, amnt, intent, rate
     else:
         status = "✅ 建議核貸 (低風險)"
 
-    # ===== logger =====
-    success, case_id = save_to_csv(
-        age, gender, edu, income, emp, home, amnt, intent,
-        rate_val, percent_val, cred_len, score,
-        probability, status
-    )
-
-    if not success:
-        return "WRITE_FAIL"
-
     return f"{status}\n違約機率：{probability:.2%}\n(案件編號: {case_id})\n✅ 已存檔"
 
 
 def submit_handler(*args):
     result = process_loan_request(*args)
-
-    if result == "WRITE_FAIL":
-        return "", gr.update(visible=True)
 
     return result, gr.update(visible=False)
 
@@ -101,11 +96,11 @@ with gr.Blocks() as demo:
                     gr.Markdown("### 👤 個人基本資料")
 
                     p_age = gr.Dropdown(list(range(20, 81)), value=20, label="年齡")
-                    p_gender = gr.Dropdown(["男", "女"], value="男", label="生理性別")
-                    p_edu = gr.Dropdown(["高中/職", "副學士(專科)", "學士", "碩士", "博士"], value="學士", label="教育程度")
-                    p_home = gr.Dropdown(["租賃", "自有（尚有貸款）", "自有（無貸款）"], value="租賃", label="居住狀況")
+                    p_gender = gr.Dropdown(GENDER_OPTIONS, value=GENDER_OPTIONS[0], label="生理性別")
+                    p_edu = gr.Dropdown(EDUCATION_OPTIONS, value="學士", label="教育程度")
+                    p_home = gr.Dropdown(HOME_OWNERSHIP_OPTIONS, value=HOME_OWNERSHIP_OPTIONS[0], label="居住狀況")
                     p_emp = gr.Dropdown(list(range(0, 66)), value=0, label="工作年資")
-                    l_intent = gr.Dropdown(["個人周轉", "教育進修", "醫療照護", "創業周轉"], value="個人周轉", label="貸款用途")
+                    l_intent = gr.Dropdown(LOAN_INTENT_OPTIONS, value=LOAN_INTENT_OPTIONS[0], label="貸款用途")
 
                 with gr.Column():
 
