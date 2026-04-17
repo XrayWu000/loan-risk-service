@@ -37,7 +37,8 @@ def get_log_file():
         if os.path.getsize(CSV_FILE) == 0:
             return None
 
-        return CSV_FILE
+        # Gradio 6 expects a string filepath for File outputs.
+        return str(CSV_FILE)
 
     except Exception:
         return None
