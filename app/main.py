@@ -1,24 +1,57 @@
+from contextlib import asynccontextmanager
+
+import joblib
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-import pandas as pd
-import joblib
 
-from pipeline.feature_engineering import prepare_model_input
-from frontend.services.logger import save_to_csv, update_loan_status
-from config import (
-    MODEL_PATH,
-    GENDER_OPTIONS,
+from app.services.gcp_uploader import (
+    get_gcp_runtime_status,
+    start_gcp_upload_scheduler,
+    stop_gcp_upload_scheduler,
+    upload_pending_logs_to_gcp,
+)
+from app.services.notification_service import send_fallback_model_alert
+from app.services.request_log_service import save_to_csv, update_loan_status
+from config.path_config import MODEL_PATH
+from config.ui_config import (
     EDUCATION_OPTIONS,
+    GENDER_OPTIONS,
     HOME_OWNERSHIP_OPTIONS,
     LOAN_INTENT_OPTIONS,
 )
+from pipeline.feature_engineering import prepare_model_input
 
-app = FastAPI()
+FALLBACK_PROBABILITY = 0.35
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    start_gcp_upload_scheduler()
+    yield
+    stop_gcp_upload_scheduler()
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+class FallbackModel:
+    def predict(self, x):
+        return [0] * len(x)
+
+    def predict_proba(self, x):
+        return [[1 - FALLBACK_PROBABILITY, FALLBACK_PROBABILITY] for _ in range(len(x))]
+
 
 try:
     model = joblib.load(MODEL_PATH)
-except Exception as e:
-    raise RuntimeError(f"模型載入失敗: {str(e)}")
+    model_load_error = None
+    fallback_alert_status = "not_needed"
+except Exception as exc:
+    print(f"模型載入失敗，已切換到 fallback model: {exc}")
+    model = FallbackModel()
+    model_load_error = str(exc)
+    fallback_alert_status = send_fallback_model_alert(str(exc))
 
 
 class LoanInput(BaseModel):
@@ -51,30 +84,30 @@ def get_decision_label(probability: float) -> str:
 
 @app.get("/")
 def root():
-    return {"message": "Loan Risk API Running"}
+    return {
+        "message": "Loan Risk API Running",
+        "model_status": "fallback" if model_load_error else "loaded",
+        "fallback_alert_status": fallback_alert_status,
+        "gcp_sync": get_gcp_runtime_status(),
+    }
 
 
 @app.post("/predict")
 def predict(data: LoanInput):
     try:
-        input_dict = data.dict()
+        input_dict = data.model_dump() if hasattr(data, "model_dump") else data.dict()
 
-        valid_gender = set(GENDER_OPTIONS)
-        valid_education = set(EDUCATION_OPTIONS)
-        valid_home = set(HOME_OWNERSHIP_OPTIONS)
-        valid_intent = set(LOAN_INTENT_OPTIONS)
+        if input_dict["person_gender"] not in set(GENDER_OPTIONS):
+            raise ValueError("無效的性別選項。")
 
-        if input_dict["person_gender"] not in valid_gender:
-            raise ValueError("無效的性別")
+        if input_dict["person_education"] not in set(EDUCATION_OPTIONS):
+            raise ValueError("無效的教育程度選項。")
 
-        if input_dict["person_education"] not in valid_education:
-            raise ValueError("無效的教育程度")
+        if input_dict["person_home_ownership"] not in set(HOME_OWNERSHIP_OPTIONS):
+            raise ValueError("無效的居住狀態選項。")
 
-        if input_dict["person_home_ownership"] not in valid_home:
-            raise ValueError("無效的居住狀況")
-
-        if input_dict["loan_intent"] not in valid_intent:
-            raise ValueError("無效的貸款用途")
+        if input_dict["loan_intent"] not in set(LOAN_INTENT_OPTIONS):
+            raise ValueError("無效的貸款用途選項。")
 
         df = pd.DataFrame([input_dict])
         df = prepare_model_input(df)
@@ -102,13 +135,12 @@ def predict(data: LoanInput):
             "status": "success",
             "probability": float(prob),
             "case_id": case_id,
+            "model_status": "fallback" if model_load_error else "loaded",
         }
-
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"模型推論錯誤: {str(e)}")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"模型推論失敗: {exc}") from exc
 
 
 @app.post("/label")
@@ -118,9 +150,15 @@ def label(data: LoanLabelInput):
             case_id=data.case_id,
             loan_status=data.loan_status,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"標記更新失敗: {exc}") from exc
 
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"標記錯誤: {str(e)}")
+@app.post("/admin/gcp/upload")
+def trigger_gcp_upload():
+    try:
+        return upload_pending_logs_to_gcp()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"GCP 上傳失敗: {exc}") from exc

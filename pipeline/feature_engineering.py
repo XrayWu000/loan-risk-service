@@ -2,7 +2,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from config import FEATURE_FILE
+from config.path_config import FEATURE_FILE
 
 
 def get_feature_columns():

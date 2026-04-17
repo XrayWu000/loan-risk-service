@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-from config import CSV_FILE
+from config.path_config import CSV_FILE
 
 def view_latest_logs():
     try:

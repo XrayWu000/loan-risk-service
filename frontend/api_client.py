@@ -1,6 +1,6 @@
 import requests
 
-from config import API_URL
+from config.api_config import API_URL
 
 def predict_from_api(age, gender, edu, income, emp, home, amnt, intent, rate, percent, cred_len, score):
     payload = {

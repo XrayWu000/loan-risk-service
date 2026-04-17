@@ -81,3 +81,7 @@ def full_evaluation(model, X_val, y_val, X_hold, y_hold):
     evaluate_model(model, X_hold, y_hold, threshold=best_t, name="Holdout")
 
     return best_t
+
+
+def evaluate(model, X, y, threshold=0.3, name="Dataset"):
+    return evaluate_model(model, X, y, threshold=threshold, name=name)

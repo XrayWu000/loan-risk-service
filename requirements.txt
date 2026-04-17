@@ -8,4 +8,5 @@ gradio
 requests
 apscheduler
 google-cloud-storage
+google-cloud-bigquery
 lightgbm
