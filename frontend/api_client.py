@@ -1,6 +1,6 @@
 import requests
 
-from config.api_config import API_URL
+from config.api_config import AGENT_ASK_URL, API_URL, RAG_QUERY_URL
 
 def predict_from_api(age, gender, edu, income, emp, home, amnt, intent, rate, percent, cred_len, score):
     payload = {
@@ -21,4 +21,16 @@ def predict_from_api(age, gender, edu, income, emp, home, amnt, intent, rate, pe
     res = requests.post(API_URL, json=payload)
     res.raise_for_status()
 
+    return res.json()
+
+
+def query_rag(question, top_k=3):
+    res = requests.post(RAG_QUERY_URL, json={"question": question, "top_k": top_k})
+    res.raise_for_status()
+    return res.json()
+
+
+def ask_agent(question, top_k=3):
+    res = requests.post(AGENT_ASK_URL, json={"question": question, "top_k": top_k})
+    res.raise_for_status()
     return res.json()

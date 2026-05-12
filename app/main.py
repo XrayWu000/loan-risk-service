@@ -5,6 +5,8 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from app.agent.agent_router import ask_agent
+from app.rag.rag_service import answer_question
 from app.services.gcp_uploader import (
     get_gcp_runtime_status,
     start_gcp_upload_scheduler,
@@ -74,6 +76,24 @@ class LoanLabelInput(BaseModel):
     loan_status: int = Field(..., ge=0, le=1)
 
 
+class RagQueryInput(BaseModel):
+    question: str = Field(..., min_length=1)
+    top_k: int = Field(3, ge=1, le=10)
+
+
+class AgentAskInput(BaseModel):
+    question: str = Field(..., min_length=1)
+    top_k: int = Field(3, ge=1, le=10)
+
+
+def get_risk_level(probability: float) -> str:
+    if probability >= 0.5:
+        return "high"
+    if probability >= 0.2:
+        return "medium"
+    return "low"
+
+
 def get_decision_label(probability: float) -> str:
     if probability >= 0.5:
         return "拒絕貸款申請 (高風險)"
@@ -134,6 +154,8 @@ def predict(data: LoanInput):
         return {
             "status": "success",
             "probability": float(prob),
+            "risk_level": get_risk_level(float(prob)),
+            "decision": decision,
             "case_id": case_id,
             "model_status": "fallback" if model_load_error else "loaded",
         }
@@ -162,3 +184,27 @@ def trigger_gcp_upload():
         return upload_pending_logs_to_gcp()
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"GCP 上傳失敗: {exc}") from exc
+
+
+@app.post("/rag/query")
+def rag_query(data: RagQueryInput):
+    try:
+        return answer_question(data.question, top_k=data.top_k)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"RAG query failed: {exc}") from exc
+
+
+@app.post("/agent/ask")
+def agent_ask(data: AgentAskInput):
+    try:
+        return ask_agent(data.question, top_k=data.top_k)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Agent request failed: {exc}") from exc

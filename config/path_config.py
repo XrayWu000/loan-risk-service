@@ -31,3 +31,28 @@ CSS_FILE = get_path(
     "CSS_FILE",
     BASE_DIR / "frontend" / "static" / "styles.css",
 )
+
+DOCUMENTS_DIR = get_path(
+    "DOCUMENTS_DIR",
+    BASE_DIR / "data" / "documents",
+)
+
+RAG_INDEX_DIR = get_path(
+    "RAG_INDEX_DIR",
+    BASE_DIR / "models" / "rag_index",
+)
+
+FAISS_INDEX_FILE = get_path(
+    "FAISS_INDEX_FILE",
+    RAG_INDEX_DIR / "faiss.index",
+)
+
+RAG_CHUNKS_FILE = get_path(
+    "RAG_CHUNKS_FILE",
+    RAG_INDEX_DIR / "chunks.json",
+)
+
+RAG_METADATA_FILE = get_path(
+    "RAG_METADATA_FILE",
+    RAG_INDEX_DIR / "index_metadata.json",
+)

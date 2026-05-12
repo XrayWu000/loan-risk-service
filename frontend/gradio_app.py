@@ -8,7 +8,7 @@ from config.ui_config import (
     LOAN_INTENT_OPTIONS,
 )
 from frontend.adapters.logging_adapter import retry_write
-from frontend.api_client import predict_from_api
+from frontend.api_client import ask_agent, predict_from_api, query_rag
 from frontend.services.log_service import get_log_file, view_latest_logs
 from frontend.utils import validate_precision
 
@@ -64,6 +64,54 @@ def retry_write_csv():
     if success:
         return gr.update(visible=False)
     return gr.update(visible=True)
+
+
+def _format_sources(sources):
+    if not sources:
+        return "無引用來源。"
+
+    rows = []
+    for idx, source in enumerate(sources, start=1):
+        source_file = source.get("source_file", "")
+        section_title = source.get("section_title", "")
+        chunk_id = source.get("chunk_id", "")
+        text = source.get("text", "")
+        rows.append(
+            f"{idx}. {source_file} / {section_title} / {chunk_id}\n{text}"
+        )
+    return "\n\n".join(rows)
+
+
+def _format_prediction(prediction):
+    if not prediction:
+        return "未呼叫預測 API。"
+
+    probability = prediction.get("probability")
+    probability_text = f"{probability:.2%}" if isinstance(probability, (int, float)) else "-"
+    return "\n".join(
+        [
+            f"probability: {probability_text}",
+            f"risk_level: {prediction.get('risk_level', '-')}",
+            f"case_id: {prediction.get('case_id', '-')}",
+            f"model_status: {prediction.get('model_status', '-')}",
+        ]
+    )
+
+
+def ai_assistant_handler(question, mode, top_k):
+    if not question or not question.strip():
+        return "請先輸入問題。", "無引用來源。", "未呼叫預測 API。"
+
+    try:
+        if mode == "文件查詢":
+            data = query_rag(question.strip(), int(top_k))
+            return data.get("answer", ""), _format_sources(data.get("sources", [])), "未呼叫預測 API。"
+
+        data = ask_agent(question.strip(), int(top_k))
+        answer = f"route: {data.get('route')}\n\n{data.get('answer', '')}"
+        return answer, _format_sources(data.get("sources", [])), _format_prediction(data.get("prediction"))
+    except Exception as exc:
+        return f"API 呼叫失敗：{exc}", "無引用來源。", "未呼叫預測 API。"
 
 
 with open(CSS_FILE, "r", encoding="utf-8") as f:
@@ -152,6 +200,39 @@ with gr.Blocks(css=custom_css) as demo:
             )
 
             retry_btn.click(fn=retry_write_csv, outputs=modal_box)
+
+        with gr.TabItem("AI 文件問答 / Agent 助理"):
+            gr.Markdown("### AI 文件問答 / Agent 助理")
+            with gr.Row():
+                assistant_mode = gr.Radio(
+                    ["文件查詢", "智慧 Agent"],
+                    value="智慧 Agent",
+                    label="模式",
+                )
+                assistant_top_k = gr.Slider(
+                    minimum=1,
+                    maximum=5,
+                    value=3,
+                    step=1,
+                    label="引用片段數",
+                )
+
+            assistant_question = gr.Textbox(
+                label="問題",
+                lines=4,
+                placeholder="例如：中風險案件要怎麼處理？",
+            )
+            assistant_submit = gr.Button("送出問題", elem_classes="submit-btn")
+
+            assistant_answer = gr.Textbox(label="回答", lines=10)
+            assistant_prediction = gr.Textbox(label="預測結果", lines=5)
+            assistant_sources = gr.Textbox(label="引用來源", lines=10)
+
+            assistant_submit.click(
+                fn=ai_assistant_handler,
+                inputs=[assistant_question, assistant_mode, assistant_top_k],
+                outputs=[assistant_answer, assistant_sources, assistant_prediction],
+            )
 
         with gr.TabItem("最新資料紀錄"):
             gr.Markdown("### 查看最近的申請紀錄")

@@ -10,3 +10,7 @@ apscheduler
 google-cloud-storage
 google-cloud-bigquery
 lightgbm
+sentence-transformers
+faiss-cpu
+pypdf
+httpx

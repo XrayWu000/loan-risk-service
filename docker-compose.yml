@@ -6,6 +6,11 @@ services:
       context: .
       dockerfile: Dockerfile.api
     container_name: loan-api
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:26b}
+      OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-120}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
     ports:
       - "8000:8000"
     volumes:
@@ -17,6 +22,8 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     container_name: loan-frontend
+    environment:
+      BASE_URL: http://api:8000
     ports:
       - "7860:7860"
     volumes:
